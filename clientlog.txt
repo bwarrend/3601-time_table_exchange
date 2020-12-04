@@ -1,0 +1,4 @@
+
+[2020/12/03 10:57:58]127.0.0.1 entered as hostname.
+[2020/12/03 10:57:58]Connected to the chat server
+[2020/12/03 10:57:58]No other users connected
