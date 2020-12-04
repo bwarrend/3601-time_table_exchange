@@ -17,6 +17,8 @@ public class ChatClient {
     public int[] tVector = {0, 0, 0, 0, 0};
     public int ID;
     public int events;
+    public boolean waitingForAnID;
+    public boolean stillReading;
 
     public ChatClient(String hostname, int port, Logger log) {
         this.hostname = hostname;
@@ -24,6 +26,8 @@ public class ChatClient {
         this.log = log;
         this.ID = 1;
         this.events = 0;
+        this.waitingForAnID = true;
+        this.stillReading = true;
     }
  
     public void execute() {
@@ -34,6 +38,9 @@ public class ChatClient {
             log.log("Connected to the chat server");
 
             new ReadThread(socket, this, log).start();
+            
+            //let's wait until we get the go ahead before we begin the write thread
+            //Get the ID from the readthread
             new WriteThread(socket, this, log).start();
 
         } catch (UnknownHostException ex) {
@@ -126,12 +133,24 @@ class ReadThread extends Thread {
             try {
                 String response = reader.readLine();
                 
-                if(client.ID == -1){
+                if(response.equals(("stop"))){
+                    client.stillReading = false;
+                    log.log("Received stop from server; breaking.");
+                    break;
+                }
+                
+                if(client.waitingForAnID){
                     client.ID = Integer.parseInt((response));
-                    System.out.println("YOur ID is :" + client.ID);
+                    System.out.println("Your ID is :" + client.ID);
+                    log.log("Your ID is :" + client.ID);
                 }else{
-                    System.out.println("\n" + response);
-                    log.log(response);
+                    
+                    
+                    
+                    
+                    
+//                    System.out.println("\n" + response);
+//                    log.log(response);
                 }                
 
 
@@ -177,6 +196,9 @@ class WriteThread extends Thread {
 
 //        String text;
         Random r = new Random();
+        
+        
+        while(client.waitingForAnID);
 
         do {
 //            text = in.nextLine();
@@ -189,15 +211,17 @@ class WriteThread extends Thread {
 //            }
 
 
+            client.events++;
             int outGoing = r.nextInt(5)+1;
             
             
 
-            
+            log.log("Event: " + client.events);
             client.tVector[client.ID]++;
             String fromArrayToString = Arrays.stream(client.tVector).mapToObj(String::valueOf).collect(Collectors.joining(","));
             client.updateVector(fromArrayToString);
             
+            log.log("From: " + client.ID + " to: " + outGoing + "    Vector: " + client.tVector);
             if(outGoing != client.ID){
                 writer.println(outGoing + "," + fromArrayToString);
             }
@@ -208,7 +232,7 @@ class WriteThread extends Thread {
 
         } while (client.events < 100);
         
-        while(true);
+        while(client.stillReading);
         
 
     }
