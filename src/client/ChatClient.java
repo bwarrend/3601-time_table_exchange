@@ -54,7 +54,7 @@ public class ChatClient {
     }
     
     public void updateVector(String asString){
-        int[] vec = Arrays.stream(asString.split(",")).mapToInt(Integer::parseInt).toArray();
+        int[] vec = stringToArray(asString);
         
         for(int i = 0; i < vec.length; ++i){
             if(vec[i] > this.tVector[i]){
@@ -62,6 +62,15 @@ public class ChatClient {
             }
         }
     }
+    
+    //Need a function that goes thru received array and then updates current
+    //array based on larger values
+    
+    public int[] stringToArray(String string){
+        return Arrays.stream(string.split(",")).mapToInt(Integer::parseInt).toArray();
+    }
+    
+    
 
 //    //Set user name
 //    void setUserName(String userName) {
@@ -145,7 +154,8 @@ class ReadThread extends Thread {
                     log.log("Your ID is :" + client.ID);
                 }else{
                     
-                    
+                    //Receive response from server, run thru function to update
+                    //our local vector
                     
                     
                     

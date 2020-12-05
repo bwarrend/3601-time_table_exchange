@@ -29,7 +29,13 @@ public class ChatServer {
                 Socket socket = serverSocket.accept();
                 System.out.println("New user connected");
                 log.log("New user connected");
+                
  
+                //Pass in the user's ID here.  Keep track of that. 0-4
+                //Can we then send a start message?  Maybe receiving the ID
+                //Will be the start message?  Create the User thread but don't
+                //start it.  Then broadcast the  ID to all and that will start?
+                //Just a thought.
                 UserThread newUser = new UserThread(socket, this, log);
                 userThreads.add(newUser);
                 newUser.start();
