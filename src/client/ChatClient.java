@@ -1,5 +1,6 @@
 package client;
 
+import com.sun.javafx.css.parser.DeriveColorConverter;
 import java.net.*;
 import java.io.*;
 import java.util.*;
@@ -24,7 +25,7 @@ public class ChatClient {
         this.hostname = hostname;
         this.port = port;
         this.log = log;
-        this.ID = 1;
+        this.ID = -1;
         this.events = 0;
         this.waitingForAnID = true;
         this.stillReading = true;
@@ -53,19 +54,19 @@ public class ChatClient {
 
     }
     
-    public void updateVector(String asString){
-        int[] vec = stringToArray(asString);
-        
+    public void updateVector(int[] vec){        
         for(int i = 0; i < vec.length; ++i){
-            if(vec[i] > this.tVector[i]){
+            if(vec[i] > tVector[i]){
                 tVector[i] = vec[i];
             }
         }
     }
     
-    //Need a function that goes thru received array and then updates current
-    //array based on larger values
     
+    public String arrayToString(int[] array){
+        return Arrays.stream(array).mapToObj(String::valueOf).collect(Collectors.joining(","));
+    }
+        
     public int[] stringToArray(String string){
         return Arrays.stream(string.split(",")).mapToInt(Integer::parseInt).toArray();
     }
@@ -142,6 +143,10 @@ class ReadThread extends Thread {
             try {
                 String response = reader.readLine();
                 
+                if(response.isEmpty()){
+                    continue;
+                }
+                
                 if(response.equals(("stop"))){
                     client.stillReading = false;
                     log.log("Received stop from server; breaking.");
@@ -152,11 +157,15 @@ class ReadThread extends Thread {
                     client.ID = Integer.parseInt((response));
                     System.out.println("Your ID is :" + client.ID);
                     log.log("Your ID is :" + client.ID);
+                    client.waitingForAnID = false;
                 }else{
-                    
-                    //Receive response from server, run thru function to update
-                    //our local vector
-                    
+                    int[] recVector = client.stringToArray(response);
+                    System.out.println("Received vector: " + response);
+                    client.updateVector(recVector);
+                    String asString = client.arrayToString(client.tVector);
+                    System.out.println("Updated vector: " + asString);
+                    //log.log("New vector: " + asString);
+                                       
                     
                     
 //                    System.out.println("\n" + response);
@@ -208,7 +217,11 @@ class WriteThread extends Thread {
         Random r = new Random();
         
         
-        while(client.waitingForAnID);
+        while(client.waitingForAnID){
+            System.out.println("Awaiting ID");
+        }
+        
+        System.out.println("Got an ID!  " + client.ID);
 
         do {
 //            text = in.nextLine();
@@ -221,17 +234,18 @@ class WriteThread extends Thread {
 //            }
 
 
-            client.events++;
-            int outGoing = r.nextInt(5)+1;
-            
+
+            int outGoing = r.nextInt(5);            
             
 
             log.log("Event: " + client.events);
             client.tVector[client.ID]++;
-            String fromArrayToString = Arrays.stream(client.tVector).mapToObj(String::valueOf).collect(Collectors.joining(","));
-            client.updateVector(fromArrayToString);
+            //client.updateVector(client.tVector);
+            String fromArrayToString = client.arrayToString(client.tVector);
             
-            log.log("From: " + client.ID + " to: " + outGoing + "    Vector: " + client.tVector);
+            System.out.println("From: " + client.ID + " to: " + outGoing + "    Vector: " + fromArrayToString);
+            log.log("From: " + client.ID + " to: " + outGoing + "    Vector: " + fromArrayToString);
+            
             if(outGoing != client.ID){
                 writer.println(outGoing + "," + fromArrayToString);
             }
@@ -242,6 +256,7 @@ class WriteThread extends Thread {
 
         } while (client.events < 100);
         
+        writer.println("stop");
         while(client.stillReading);
         
 

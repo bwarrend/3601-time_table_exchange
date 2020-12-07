@@ -4,16 +4,21 @@ import java.net.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
  
 public class ChatServer {
     private int port;
     private Set<String> userNames = new HashSet<>();
     private Set<UserThread> userThreads = new HashSet<>();
     private Logger log;
+    public int currentID;
+    public boolean receivingNewConnections;
  
     public ChatServer(int port, Logger log) {
         this.port = port;
         this.log = log;
+        currentID = 0;
+        receivingNewConnections = true;
     }
     
     
@@ -27,8 +32,8 @@ public class ChatServer {
  
             while (true) {
                 Socket socket = serverSocket.accept();
-                System.out.println("New user connected");
-                log.log("New user connected");
+                System.out.println("New client connected: " + currentID);
+                log.log("New client connected: " + currentID);
                 
  
                 //Pass in the user's ID here.  Keep track of that. 0-4
@@ -36,9 +41,31 @@ public class ChatServer {
                 //Will be the start message?  Create the User thread but don't
                 //start it.  Then broadcast the  ID to all and that will start?
                 //Just a thought.
-                UserThread newUser = new UserThread(socket, this, log);
+                
+                UserThread newUser = new UserThread(socket, this, log, currentID);
+                currentID++;
                 userThreads.add(newUser);
-                newUser.start();
+                
+                
+                
+                if(currentID > 4 && receivingNewConnections){
+                    
+                    System.out.println("WE GOT ENOUGH AND NOW WE'RE GOING");
+                    for(UserThread user : userThreads){
+                        System.out.println("STARTING CLIENT: " + user.ID);
+                        user.start();
+                    }
+                    //newUser.start();
+                    //int idToGive = 0;
+                    for(UserThread user : userThreads){
+//                        System.out.println("INTEGER: " + idToGive);
+//                        System.out.println("STRING: " + Integer.toString(idToGive));
+                        user.sendMessage(String.format("%d",user.ID));
+                    }
+                    
+                    receivingNewConnections = false;
+                }
+                
  
             }
  
@@ -83,21 +110,30 @@ public class ChatServer {
             }
         }
     }
- 
-    //Adds user name to list of users
-    void addUserName(String userName) {
-        userNames.add(userName);
-    }
- 
-    //Removes user from userThreads hash set
-    void removeUser(String userName, UserThread aUser) {
-        boolean removed = userNames.remove(userName);
-        if (removed) {
-            userThreads.remove(aUser);
-            System.out.println("The user " + userName + " has quit");
-            log.log("The user " + userName + " has quit");
+    
+    void sendVectorToWhom(String sendyMessage, int id){
+        for(UserThread user : userThreads){
+            if (user.ID == id){
+                user.sendMessage(sendyMessage);
+            }
         }
     }
+    
+ 
+//    //Adds user name to list of users
+//    void addUserName(String userName) {
+//        userNames.add(userName);
+//    }
+ 
+//    //Removes user from userThreads hash set
+//    void removeUser(String userName, UserThread aUser) {
+//        boolean removed = userNames.remove(userName);
+//        if (removed) {
+//            userThreads.remove(aUser);
+//            System.out.println("The user " + userName + " has quit");
+//            log.log("The user " + userName + " has quit");
+//        }
+//    }
     
     
     //Return connected users
@@ -118,12 +154,16 @@ class UserThread extends Thread {
     private ChatServer server;
     private PrintWriter writer;
     private Logger log;
-    private String userName;
+    //private String userName;
+    public int ID;
+    public int finishedWriting;
  
-    public UserThread(Socket socket, ChatServer server, Logger log) {
+    public UserThread(Socket socket, ChatServer server, Logger log, int ID) {
         this.socket = socket;
         this.server = server;
         this.log = log;
+        this.ID = ID;
+        finishedWriting = 0;
     }
  
     @Override
@@ -135,37 +175,70 @@ class UserThread extends Thread {
             OutputStream output = socket.getOutputStream();
             writer = new PrintWriter(output, true);
  
-            printUsers();
+//            printUsers();
  
-            userName = reader.readLine();
-            server.addUserName(userName);
+//            userName = reader.readLine();
+//            server.addUserName(userName);
  
-            String serverMessage = "User set their name to " + userName;
-            server.broadcast(serverMessage, this);
+//            String outgoingMessage;
+//            = "User set their name to " + userName;
+//            server.broadcast(serverMessage, this);
 
-            log.log("User set their name to " + userName);
+//            log.log("User set their name to " + userName);
  
             String clientMessage;
  
             do {
                 clientMessage = reader.readLine();
-                serverMessage = clientMessage;
-                server.broadcast(serverMessage, this);
-                log.log(serverMessage);
+                System.out.println("FULL CLIENT MESSAGE");
+                System.out.println("FROM: " + ID);
+                System.out.println("MESSAGE: " + clientMessage);
+                //outgoingMessage = clientMessage;
+                
+                if(clientMessage.equals("stop")){
+                    break;
+                }
+                
+                int outGoingID = Character.getNumericValue(clientMessage.charAt(0));
+                
+                
+                System.out.println("OUTGOING ID = " + outGoingID);
+                
+                
+                String justTheMessage = clientMessage.substring(2);
+                
+                System.out.println("JUST THE MESSAGE: " + justTheMessage);
+                
+                
+                server.sendVectorToWhom(justTheMessage, outGoingID);
+                System.out.println("SEND MESSAGE TO WHOM: " + justTheMessage + " " + outGoingID);
+                
+//                server.broadcast(serverMessage, this);
+//                log.log(serverMessage);
  
-            } while (!clientMessage.equals("bye"));
- 
-            server.removeUser(userName, this);
+            //} while (!clientMessage.equals("bye"));
+            }while(true);
+            
+            finishedWriting++;
+            
+            while(finishedWriting <= 5){
+                
+            }
+            
             socket.close();
+            
  
-            serverMessage = userName + " has quit.";
-            server.broadcast(serverMessage, this);
-            log.log(serverMessage);
+            //server.removeUser(userName, this);
+            //socket.close();
+ 
+//            serverMessage = userName + " has quit.";
+//            server.broadcast(serverMessage, this);
+//            log.log(serverMessage);
  
         } catch (Exception ex) {
             try{
-                System.err.println(userName + " has disconnected" + ((ex.equals(null)) ? (": " + ex.getMessage()) : "."));
-                log.log(userName + " has disconnected" + ((ex.equals(null)) ? (": " + ex.getMessage()) : "."));
+                System.err.println(ID + " has disconnected" + ((ex.equals(null)) ? (": " + ex.getMessage()) : "."));
+                log.log(ID + " has disconnected" + ((ex.equals(null)) ? (": " + ex.getMessage()) : "."));
             }catch(Exception e){
                 System.err.println("User has disconnected: " + ex.getMessage());
                 log.log("User has disconnected: " + ex.getMessage());
