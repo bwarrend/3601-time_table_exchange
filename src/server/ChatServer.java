@@ -31,35 +31,35 @@ public class ChatServer {
             log.log("Server is listening on port " + port);
  
             while (true) {
+                //Accept incomming socket connection requests
                 Socket socket = serverSocket.accept();
                 System.out.println("New client connected: " + currentID);
                 log.log("New client connected: " + currentID);
                 
- 
-                //Pass in the user's ID here.  Keep track of that. 0-4
-                //Can we then send a start message?  Maybe receiving the ID
-                //Will be the start message?  Create the User thread but don't
-                //start it.  Then broadcast the  ID to all and that will start?
-                //Just a thought.
-                
+                //Create a new user thread for socket connections
                 UserThread newUser = new UserThread(socket, this, log, currentID);
+                
+                //Increment which ID we are giving out, add user thread to hash
                 currentID++;
                 userThreads.add(newUser);
                 
                 
-                
-                if(currentID > 4 && receivingNewConnections){
-                    
-                    System.out.println("WE GOT ENOUGH AND NOW WE'RE GOING");
+                //Once we have enough Clients, start the userthreads and send 
+                //each client an ID
+                if(currentID > 4 && receivingNewConnections){                    
+                    System.out.println("Five clients connected, let's start them up.");
+                    log.log("Five clients connected, let's start them up.");
                     for(UserThread user : userThreads){
                         System.out.println("STARTING CLIENT: " + user.ID);
+                        log.log("STARTING CLIENT: " + user.ID);
                         user.start();
                     }
-                    //newUser.start();
-                    //int idToGive = 0;
+                    //Send ID to each user.  String.format needed to be used instead
+                    //of Integer.parseInt() because that for some reason was only
+                    //sending "" strings and causing problems
                     for(UserThread user : userThreads){
-//                        System.out.println("INTEGER: " + idToGive);
-//                        System.out.println("STRING: " + Integer.toString(idToGive));
+                        System.out.println("Send ID to user: " + user.ID);
+                        log.log("Send ID to user: " + user.ID);
                         user.sendMessage(String.format("%d",user.ID));
                     }
                     
@@ -78,39 +78,18 @@ public class ChatServer {
     
     //MAIN METHOD
     //Enter a port number and the server will start listening on that port.
-    public static void StartServer() {
-        Scanner in = new Scanner(System.in);
-        
-        Logger log = new Logger("serverlog.txt");
-
-//        System.out.println("Enter a port number: ");
-        
+    public static void StartServer() {        
+        //Create server log and set port
+        Logger log = new Logger("serverlog.txt");        
         int port = 27015;
         
-//        try {
-//            port = in.nextInt();
-//        }catch(Exception e){ 
-//            System.out.println("An invalid port was entered.");
-//            log.log("An invalid port was entered.");
-//            System.exit(0);
-//        }
-        
+        //Begin server
         ChatServer server = new ChatServer(port, log);
         server.execute();
     }
     
     
-    
- 
-    //Broadcast message to all users but the sending user
-    void broadcast(String message, UserThread excludeUser) {
-        for (UserThread aUser : userThreads) {
-            if (aUser != excludeUser) {
-                aUser.sendMessage(message);
-            }
-        }
-    }
-    
+    //Send string message that contains an array to the user with provided ID    
     void sendVectorToWhom(String sendyMessage, int id){
         for(UserThread user : userThreads){
             if (user.ID == id){
@@ -119,32 +98,6 @@ public class ChatServer {
         }
     }
     
- 
-//    //Adds user name to list of users
-//    void addUserName(String userName) {
-//        userNames.add(userName);
-//    }
- 
-//    //Removes user from userThreads hash set
-//    void removeUser(String userName, UserThread aUser) {
-//        boolean removed = userNames.remove(userName);
-//        if (removed) {
-//            userThreads.remove(aUser);
-//            System.out.println("The user " + userName + " has quit");
-//            log.log("The user " + userName + " has quit");
-//        }
-//    }
-    
-    
-    //Return connected users
-    Set<String> getUserNames() {
-        return this.userNames;
-    }
- 
-    //Return whether we have any connected users
-    boolean hasUsers() {
-        return !this.userNames.isEmpty();
-    }
 }
 
 
@@ -154,9 +107,8 @@ class UserThread extends Thread {
     private ChatServer server;
     private PrintWriter writer;
     private Logger log;
-    //private String userName;
     public int ID;
-    public int finishedWriting;
+    public static int finishedWriting;
  
     public UserThread(Socket socket, ChatServer server, Logger log, int ID) {
         this.socket = socket;
@@ -175,65 +127,45 @@ class UserThread extends Thread {
             OutputStream output = socket.getOutputStream();
             writer = new PrintWriter(output, true);
  
-//            printUsers();
- 
-//            userName = reader.readLine();
-//            server.addUserName(userName);
- 
-//            String outgoingMessage;
-//            = "User set their name to " + userName;
-//            server.broadcast(serverMessage, this);
-
-//            log.log("User set their name to " + userName);
- 
             String clientMessage;
  
+            
             do {
                 clientMessage = reader.readLine();
-                System.out.println("FULL CLIENT MESSAGE");
-                System.out.println("FROM: " + ID);
-                System.out.println("MESSAGE: " + clientMessage);
-                //outgoingMessage = clientMessage;
                 
                 if(clientMessage.equals("stop")){
                     break;
                 }
                 
+                //Extract recipient and prepare message to be sent to them                
                 int outGoingID = Character.getNumericValue(clientMessage.charAt(0));
-                
-                
-                System.out.println("OUTGOING ID = " + outGoingID);
-                
-                
                 String justTheMessage = clientMessage.substring(2);
                 
-                System.out.println("JUST THE MESSAGE: " + justTheMessage);
                 
+                System.out.println("_Server received event_" + 
+                        "\n<From " + ID + "  TO> " + outGoingID +
+                        "\nMessage: " + justTheMessage);
                 
+                log.log("_Server received event_" + 
+                        "\n<From " + ID + "  TO> " + outGoingID +
+                        "\nMessage: " + justTheMessage);                
+                
+                //Send the vector to the recipient
                 server.sendVectorToWhom(justTheMessage, outGoingID);
-                System.out.println("SEND MESSAGE TO WHOM: " + justTheMessage + " " + outGoingID);
+
                 
-//                server.broadcast(serverMessage, this);
-//                log.log(serverMessage);
- 
-            //} while (!clientMessage.equals("bye"));
             }while(true);
             
             finishedWriting++;
             
+            //If we receive stop from a client, wait until we receive stop
+            //from all clients
             while(finishedWriting <= 5){
                 
             }
             
             socket.close();
             
- 
-            //server.removeUser(userName, this);
-            //socket.close();
- 
-//            serverMessage = userName + " has quit.";
-//            server.broadcast(serverMessage, this);
-//            log.log(serverMessage);
  
         } catch (Exception ex) {
             try{
@@ -245,16 +177,7 @@ class UserThread extends Thread {
             }
         }
     }
- 
-    //Sends a list of all connected users
-    void printUsers() {
-        if (server.hasUsers()) {
-            writer.println("Connected users: " + server.getUserNames());
-        } else {
-            writer.println("No other users connected");
-        }
-    }
- 
+  
     //Sends a message
     void sendMessage(String message) {
         writer.println(message);
