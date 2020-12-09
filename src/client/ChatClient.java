@@ -193,6 +193,9 @@ class WriteThread extends Thread {
     public void run() {
         Random r = new Random();
         
+        final int EVENTS = 100;
+        final int DELAY_MS = 50;
+        
         
         //Do not begin writing anything until we have an ID
         //I HAVE NO IDEA WHY IT IS NECESSARY TO PRINT AWAITING ID WHILE WE WAIT
@@ -227,10 +230,19 @@ class WriteThread extends Thread {
             }
             
             //Increment events
-            client.events++;        
+            client.events++;  
+            
+            if(DELAY_MS > 0){
+                try{
+                    Thread.sleep(DELAY_MS);
+                }catch(InterruptedException ex){
+                    Thread.currentThread().interrupt();
+                }
+            }
+            
 
         //Break out once we generate 100 events
-        } while (client.events < 100);
+        } while (client.events < EVENTS);
         
         //Send stop to the server
         writer.println("stop");
