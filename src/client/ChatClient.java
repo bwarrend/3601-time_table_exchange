@@ -144,18 +144,18 @@ class ReadThread extends Thread {
                     int[] recVector = client.stringToArray(response);
 
                     String asString = client.arrayToString(client.tVector);
-                    System.out.println("Received vector: " + response +
-                            "\nCurrent vector:  " + asString);
-                    log.log("Received vector: " + response +
-                            "\nCurrent vector:  " + asString);
+                    System.out.println("\nClient:" + client.ID + " Received vector: " + response +
+                            "\nClient:" + client.ID + " Current vector:  " + asString);
+                    log.log("\nClient:" + client.ID + " Received vector: " + response +
+                            "\nClient:" + client.ID + " Current vector:  " + asString);
                     
                     client.updateVector(recVector);
                     asString = client.arrayToString(client.tVector);
                     
 
                     
-                    System.out.println("Updated vector: " + asString);
-                    log.log("\nUpdated vector: " + asString);
+                    System.out.println("\nClient:" + client.ID + " Updated vector: " + asString);
+                    log.log("\nClient:" + client.ID + " Updated vector: " + asString);
                     
                 }                
 
@@ -194,8 +194,7 @@ class WriteThread extends Thread {
         Random r = new Random();
         
         final int EVENTS = 100;
-        final int DELAY_MS = 50;
-        
+        final int DELAY_MS = 50;        
         
         //Do not begin writing anything until we have an ID
         //I HAVE NO IDEA WHY IT IS NECESSARY TO PRINT AWAITING ID WHILE WE WAIT
@@ -210,10 +209,14 @@ class WriteThread extends Thread {
 
         do {
             //Generate recipient of event
-            int outGoing = r.nextInt(5);            
+            int outGoing = r.nextInt(20);               
+            if(outGoing > 4){
+                outGoing = client.ID;
+            }
             
             //Add 1 to our ID element in the local vector
-            log.log(client.ID + " event: " + client.events);
+            System.out.println("Client " + client.ID + " is generating its " + client.events + "th event.");
+            log.log("Client " + client.ID + " is generating its " + client.events + "th event.");
             client.tVector[client.ID]++;
             
             //Turn our local vector into a string to prepare sending

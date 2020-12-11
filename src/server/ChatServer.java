@@ -128,19 +128,16 @@ class UserThread extends Thread {
             writer = new PrintWriter(output, true);
  
             String clientMessage;
- 
             
             do {
                 clientMessage = reader.readLine();
                 
                 if(clientMessage.equals("stop")){
                     break;
-                }
-                
+                }                
                 //Extract recipient and prepare message to be sent to them                
                 int outGoingID = Character.getNumericValue(clientMessage.charAt(0));
-                String justTheMessage = clientMessage.substring(2);
-                
+                String justTheMessage = clientMessage.substring(2);                
                 
                 System.out.println("_Server received event_" + 
                         "\n<From " + ID + "  TO> " + outGoingID +
@@ -152,7 +149,6 @@ class UserThread extends Thread {
                 
                 //Send the vector to the recipient
                 server.sendVectorToWhom(justTheMessage, outGoingID);
-
                 
             }while(true);
             
